@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Erreurs de Charge</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- Alpine.js pour interactivité -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+
+    <style>
+        .tab-button {
+            @apply px-4 py-2 text-sm font-medium rounded-t-lg transition-all;
+        }
+        .tab-button.active {
+            @apply bg-blue-600 text-white;
+        }
+        .tab-button:not(.active) {
+            @apply bg-gray-200 text-gray-700 hover:bg-gray-300;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div x-data="appData()" x-init="init()">
+        <!-- Header -->
+        <header class="bg-white shadow-sm">
+            <div class="container mx-auto px-4 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <img src="/static/images/elto.png" alt="ELTO" class="h-16">
+                        <img src="/static/images/Logo.png" alt="Logo" class="h-12">
+                        <img src="/static/images/nidec.png" alt="NIDEC" class="h-16">
+                    </div>
+                    <div class="text-right">
+                        <h1 class="text-2xl font-bold text-gray-800">Dashboard Erreurs de Charge</h1>
+                        <p class="text-sm text-gray-600">Monitoring des bornes de recharge</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Filtres globaux -->
+        <div class="bg-white shadow-sm border-b">
+            <div class="container mx-auto px-4 py-4">
+                <h2 class="text-lg font-semibold text-gray-800 mb-4">🎯 Filtres</h2>
+
+                <form id="filter-form"
+                      hx-post="/api/filters"
+                      hx-trigger="change"
+                      hx-target="#kpis-summary"
+                      hx-swap="innerHTML">
+
+                    <!-- Sites -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Sites</label>
+                        <div class="flex gap-2">
+                            <button type="button"
+                                    @click="selectAllSites()"
+                                    class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm">
+                                ✅ Tous les sites
+                            </button>
+                            <select multiple
+                                    name="sites[]"
+                                    x-model="filters.sites"
+                                    @change="updateFilters()"
+                                    class="flex-1 border border-gray-300 rounded px-3 py-2">
+                                {{range .Sites}}
+                                <option value="{{.}}">{{.}}</option>
+                                {{end}}
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Période -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">📅 Période d'analyse</label>
+                        <div class="flex gap-2 mb-2">
+                            <button type="button"
+                                    @click="setDateMode('focus_jour')"
+                                    :class="{'bg-blue-600 text-white': filters.date_mode === 'focus_jour', 'bg-gray-200 text-gray-700': filters.date_mode !== 'focus_jour'}"
+                                    class="px-4 py-2 rounded hover:opacity-80">
+                                📅 Focus Jour
+                            </button>
+                            <button type="button"
+                                    @click="setDateMode('mois_complet')"
+                                    :class="{'bg-blue-600 text-white': filters.date_mode === 'mois_complet', 'bg-gray-200 text-gray-700': filters.date_mode !== 'mois_complet'}"
+                                    class="px-4 py-2 rounded hover:opacity-80">
+                                📅 Focus Mois
+                            </button>
+                            <button type="button"
+                                    @click="setDateMode('j_minus_1')"
+                                    :class="{'bg-blue-600 text-white': filters.date_mode === 'j_minus_1', 'bg-gray-200 text-gray-700': filters.date_mode !== 'j_minus_1'}"
+                                    class="px-4 py-2 rounded hover:opacity-80">
+                                📅 J-1 (Hier)
+                            </button>
+                            <button type="button"
+                                    @click="setDateMode('semaine_minus_1')"
+                                    :class="{'bg-blue-600 text-white': filters.date_mode === 'semaine_minus_1', 'bg-gray-200 text-gray-700': filters.date_mode !== 'semaine_minus_1'}"
+                                    class="px-4 py-2 rounded hover:opacity-80">
+                                📅 Semaine -1
+                            </button>
+                            <button type="button"
+                                    @click="setDateMode('toute_periode')"
+                                    :class="{'bg-blue-600 text-white': filters.date_mode === 'toute_periode', 'bg-gray-200 text-gray-700': filters.date_mode !== 'toute_periode'}"
+                                    class="px-4 py-2 rounded hover:opacity-80">
+                                📅 Toute la période
+                            </button>
+                        </div>
+
+                        <!-- Sélection mois si mois_complet -->
+                        <div x-show="filters.date_mode === 'mois_complet'" class="flex gap-4 mt-2">
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">Année</label>
+                                <select name="focus_year"
+                                        x-model="filters.focus_year"
+                                        @change="updateFilters()"
+                                        class="border border-gray-300 rounded px-3 py-2">
+                                    <option value="{{.Year}}">{{.Year}}</option>
+                                    <option value="{{sub .Year 1}}">{{sub .Year 1}}</option>
+                                    <option value="{{sub .Year 2}}">{{sub .Year 2}}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">Mois</label>
+                                <select name="focus_month"
+                                        x-model="filters.focus_month"
+                                        @change="updateFilters()"
+                                        class="border border-gray-300 rounded px-3 py-2">
+                                    <option value="1">Janvier</option>
+                                    <option value="2">Février</option>
+                                    <option value="3">Mars</option>
+                                    <option value="4">Avril</option>
+                                    <option value="5">Mai</option>
+                                    <option value="6">Juin</option>
+                                    <option value="7">Juillet</option>
+                                    <option value="8">Août</option>
+                                    <option value="9">Septembre</option>
+                                    <option value="10">Octobre</option>
+                                    <option value="11">Novembre</option>
+                                    <option value="12">Décembre</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Sélection jour si focus_jour -->
+                        <div x-show="filters.date_mode === 'focus_jour'" class="mt-2">
+                            <label class="block text-sm text-gray-600 mb-1">Date</label>
+                            <input type="date"
+                                   name="focus_day"
+                                   x-model="filters.focus_day"
+                                   @change="updateFilters()"
+                                   class="border border-gray-300 rounded px-3 py-2">
+                        </div>
+
+                        <input type="hidden" name="date_mode" x-model="filters.date_mode">
+                    </div>
+
+                    <!-- Filtres erreur et moment -->
+                    <div class="grid grid-cols-3 gap-4 mb-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Type d'erreur</label>
+                            <select multiple
+                                    name="types_erreur[]"
+                                    x-model="filters.types_erreur"
+                                    @change="updateFilters()"
+                                    class="w-full border border-gray-300 rounded px-3 py-2">
+                                <option value="Erreur_EVI">Erreur EVI</option>
+                                <option value="Erreur_DownStream">Erreur DownStream</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Moment d'erreur</label>
+                            <select multiple
+                                    name="moments[]"
+                                    x-model="filters.moments"
+                                    @change="updateFilters()"
+                                    class="w-full border border-gray-300 rounded px-3 py-2">
+                                <option value="Init">Init</option>
+                                <option value="Lock Connector">Lock Connector</option>
+                                <option value="CableCheck">CableCheck</option>
+                                <option value="Charge">Charge</option>
+                                <option value="Fin de charge">Fin de charge</option>
+                                <option value="Unknown">Unknown</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Raccourcis</label>
+                            <div class="space-y-2">
+                                <button type="button"
+                                        @click="toggleMoments(['Init', 'Lock Connector', 'CableCheck'])"
+                                        class="w-full px-3 py-2 bg-purple-100 text-purple-700 rounded hover:bg-purple-200 text-sm">
+                                    ⚡ Avant charge
+                                </button>
+                                <button type="button"
+                                        @click="toggleMoments(['Charge'])"
+                                        class="w-full px-3 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm">
+                                    🔋 Charge
+                                </button>
+                                <button type="button"
+                                        @click="toggleMoments(['Fin de charge'])"
+                                        class="w-full px-3 py-2 bg-green-100 text-green-700 rounded hover:bg-green-200 text-sm">
+                                    ⚡ Fin de charge
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- KPIs Summary -->
+                <div id="kpis-summary" class="mt-4 grid grid-cols-5 gap-4">
+                    <!-- Sera rempli par HTMX -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="bg-white shadow-sm">
+            <div class="container mx-auto px-4">
+                <div class="flex overflow-x-auto space-x-2 py-2">
+                    <button @click="activeTab = 'overview'"
+                            :class="activeTab === 'overview' ? 'active' : ''"
+                            class="tab-button">
+                        📊 Vue d'ensemble
+                    </button>
+                    <button @click="activeTab = 'general'"
+                            :class="activeTab === 'general' ? 'active' : ''"
+                            class="tab-button">
+                        📋 Générale
+                    </button>
+                    <button @click="activeTab = 'comparison'"
+                            :class="activeTab === 'comparison' ? 'active' : ''"
+                            class="tab-button">
+                        🏢 Comparaison par site
+                    </button>
+                    <button @click="activeTab = 'pdc-details'"
+                            :class="activeTab === 'pdc-details' ? 'active' : ''"
+                            class="tab-button">
+                        🔌 Détails PDC
+                    </button>
+                    <button @click="activeTab = 'stats'"
+                            :class="activeTab === 'stats' ? 'active' : ''"
+                            class="tab-button">
+                        📈 Statistiques
+                    </button>
+                    <button @click="activeTab = 'projection'"
+                            :class="activeTab === 'projection' ? 'active' : ''"
+                            class="tab-button">
+                        📑 Projection pivot
+                    </button>
+                    <button @click="activeTab = 'attempts'"
+                            :class="activeTab === 'attempts' ? 'active' : ''"
+                            class="tab-button">
+                        ⚠️ Tentatives multiples
+                    </button>
+                    <button @click="activeTab = 'suspicious'"
+                            :class="activeTab === 'suspicious' ? 'active' : ''"
+                            class="tab-button">
+                        ⚠️ Transactions suspectes
+                    </button>
+                    <button @click="activeTab = 'error-moment'"
+                            :class="activeTab === 'error-moment' ? 'active' : ''"
+                            class="tab-button">
+                        🔍 Erreur Moment
+                    </button>
+                    <button @click="activeTab = 'error-specific'"
+                            :class="activeTab === 'error-specific' ? 'active' : ''"
+                            class="tab-button">
+                        🔍 Erreur Spécifique
+                    </button>
+                    <button @click="activeTab = 'alerts'"
+                            :class="activeTab === 'alerts' ? 'active' : ''"
+                            class="tab-button">
+                        ⚠️ Alertes
+                    </button>
+                    <button @click="activeTab = 'evolution'"
+                            :class="activeTab === 'evolution' ? 'active' : ''"
+                            class="tab-button">
+                        📈 Évolution
+                    </button>
+                    <button @click="activeTab = 'defects'"
+                            :class="activeTab === 'defects' ? 'active' : ''"
+                            class="tab-button">
+                        📋 Historique Défauts
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="container mx-auto px-4 py-6">
+            <div id="tab-content"
+                 hx-post="/tabs/overview"
+                 hx-trigger="load"
+                 hx-swap="innerHTML"
+                 class="bg-white rounded-lg shadow p-6">
+                <!-- Le contenu sera chargé ici -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function appData() {
+            return {
+                activeTab: 'overview',
+                filters: {
+                    sites: {{.Sites | json}},
+                    date_mode: 'mois_complet',
+                    focus_year: {{.Year}},
+                    focus_month: {{.Month}},
+                    focus_day: new Date().toISOString().split('T')[0],
+                    types_erreur: [],
+                    moments: []
+                },
+
+                init() {
+                    this.$watch('activeTab', (value) => {
+                        this.loadTab(value);
+                    });
+                    this.updateKPIs();
+                },
+
+                selectAllSites() {
+                    this.filters.sites = {{.Sites | json}};
+                    this.updateFilters();
+                },
+
+                setDateMode(mode) {
+                    this.filters.date_mode = mode;
+                    this.updateFilters();
+                },
+
+                toggleMoments(moments) {
+                    moments.forEach(m => {
+                        const idx = this.filters.moments.indexOf(m);
+                        if (idx === -1) {
+                            this.filters.moments.push(m);
+                        } else {
+                            this.filters.moments.splice(idx, 1);
+                        }
+                    });
+                    this.updateFilters();
+                },
+
+                updateFilters() {
+                    this.updateKPIs();
+                    this.loadTab(this.activeTab);
+                },
+
+                async updateKPIs() {
+                    const formData = new FormData(document.getElementById('filter-form'));
+                    const response = await fetch('/api/kpis', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const kpis = await response.json();
+
+                    document.getElementById('kpis-summary').innerHTML = `
+                        <div class="bg-blue-50 rounded-lg p-4">
+                            <div class="text-sm text-gray-600">Total charges</div>
+                            <div class="text-2xl font-bold text-blue-600">${kpis.total}</div>
+                        </div>
+                        <div class="bg-green-50 rounded-lg p-4">
+                            <div class="text-sm text-gray-600">Réussite</div>
+                            <div class="text-2xl font-bold text-green-600">${kpis.ok}</div>
+                        </div>
+                        <div class="bg-red-50 rounded-lg p-4">
+                            <div class="text-sm text-gray-600">Échec</div>
+                            <div class="text-2xl font-bold text-red-600">${kpis.nok}</div>
+                        </div>
+                        <div class="bg-purple-50 rounded-lg p-4">
+                            <div class="text-sm text-gray-600">Taux réussite</div>
+                            <div class="text-2xl font-bold text-purple-600">${kpis.taux_reussite.toFixed(2)}%</div>
+                        </div>
+                        <div class="bg-gray-50 rounded-lg p-4">
+                            <div class="text-sm text-gray-600">Taux échec</div>
+                            <div class="text-2xl font-bold text-gray-600">${kpis.taux_echec.toFixed(2)}%</div>
+                        </div>
+                    `;
+                },
+
+                loadTab(tab) {
+                    const formData = new FormData(document.getElementById('filter-form'));
+                    fetch('/tabs/' + tab, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.text())
+                    .then(html => {
+                        document.getElementById('tab-content').innerHTML = html;
+                    });
+                }
+            }
+        }
+    </script>
+</body>
+</html>

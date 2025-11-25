@@ -1,0 +1,381 @@
+<div class="space-y-6">
+    <h2 class="text-2xl font-bold text-gray-800">📋 Vue Générale</h2>
+
+    <!-- KPIs Globaux -->
+    <div>
+        <h3 class="text-lg font-semibold mb-3">📊 Indicateurs Globaux</h3>
+        <div class="grid grid-cols-3 gap-4">
+            <!-- Total des charges -->
+            <div class="bg-blue-50 rounded-lg p-6">
+                <div class="text-sm text-gray-600 mb-2">Total des charges</div>
+                <div class="text-4xl font-bold text-blue-600 mb-2">{{.KPIs.Total}}</div>
+                <div class="text-xs text-gray-500">
+                    <span class="text-green-600 font-semibold">{{.KPIs.OK}}</span> réussies /
+                    <span class="text-red-600 font-semibold">{{.KPIs.NOK}}</span> échouées
+                </div>
+            </div>
+
+            <!-- Taux de réussite -->
+            <div class="bg-green-50 rounded-lg p-6">
+                <div class="text-sm text-gray-600 mb-2">Taux de réussite</div>
+                <div class="text-4xl font-bold text-green-600 mb-2">{{printf "%.2f" .KPIs.TauxReussite}}%</div>
+                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div class="h-full bg-green-500" style="width: {{printf "%.2f" .KPIs.TauxReussite}}%"></div>
+                </div>
+            </div>
+
+            <!-- Taux d'échec -->
+            <div class="bg-red-50 rounded-lg p-6">
+                <div class="text-sm text-gray-600 mb-2">Taux d'échec</div>
+                <div class="text-4xl font-bold text-red-600 mb-2">{{printf "%.2f" .KPIs.TauxEchec}}%</div>
+                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div class="h-full bg-red-500" style="width: {{printf "%.2f" .KPIs.TauxEchec}}%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Infrastructures -->
+        <div class="grid grid-cols-2 gap-4 mt-4">
+            <div class="bg-purple-50 rounded-lg p-4 text-center">
+                <div class="text-sm text-gray-600">Nombre de sites</div>
+                <div class="text-3xl font-bold text-purple-600">{{.KPIs.NbSites}}</div>
+            </div>
+            <div class="bg-indigo-50 rounded-lg p-4 text-center">
+                <div class="text-sm text-gray-600">Nombre de PDC</div>
+                <div class="text-3xl font-bold text-indigo-600">{{.KPIs.NbPDC}}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Répartition des erreurs par moment -->
+    <div>
+        <h3 class="text-lg font-semibold mb-3">⏰ Répartition des erreurs par moment</h3>
+        {{if gt (len .MomentCounts) 0}}
+        <div class="bg-white border border-gray-200 rounded-lg p-4">
+            <canvas id="moments-chart" class="w-full" style="height: 300px;"></canvas>
+        </div>
+
+        <!-- Table détaillée -->
+        <div class="mt-4 overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Moment d'erreur</th>
+                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-700">Nombre d'occurrences</th>
+                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-700">Pourcentage</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{$total := 0}}
+                    {{range .MomentCounts}}
+                        {{$total = add $total .Count}}
+                    {{end}}
+                    {{range .MomentCounts}}
+                    <tr class="border-t hover:bg-gray-50">
+                        <td class="px-4 py-2 text-sm text-gray-900">
+                            {{if eq .Moment "Init"}}🔌
+                            {{else if eq .Moment "Lock Connector"}}🔒
+                            {{else if eq .Moment "CableCheck"}}🔍
+                            {{else if eq .Moment "Charge"}}🔋
+                            {{else if eq .Moment "Fin de charge"}}⚡
+                            {{else}}❓{{end}}
+                            {{.Moment}}
+                        </td>
+                        <td class="px-4 py-2 text-sm text-gray-900 text-right font-semibold">{{.Count}}</td>
+                        <td class="px-4 py-2 text-sm text-gray-600 text-right">
+                            {{if gt $total 0}}
+                                {{printf "%.2f" (mult (div (float64 .Count) (float64 $total)) 100.0)}}%
+                            {{else}}
+                                0.00%
+                            {{end}}
+                        </td>
+                    </tr>
+                    {{end}}
+                    <tr class="border-t bg-gray-50 font-semibold">
+                        <td class="px-4 py-2 text-sm text-gray-900">Total</td>
+                        <td class="px-4 py-2 text-sm text-gray-900 text-right">{{$total}}</td>
+                        <td class="px-4 py-2 text-sm text-gray-900 text-right">100.00%</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        {{else}}
+        <div class="bg-gray-50 rounded-lg p-8 text-center text-gray-500">
+            Aucune erreur détectée sur la période sélectionnée
+        </div>
+        {{end}}
+    </div>
+
+    <!-- Statistiques par site -->
+    <div>
+        <h3 class="text-lg font-semibold mb-3">🏢 Statistiques par site</h3>
+        {{if gt (len .SiteStats) 0}}
+
+        <!-- Graphique comparatif -->
+        <div class="grid grid-cols-2 gap-4 mb-4">
+            <div>
+                <h4 class="font-medium text-gray-700 mb-2 text-center">Taux de réussite par site</h4>
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <canvas id="site-success-chart" class="w-full" style="height: 400px;"></canvas>
+                </div>
+            </div>
+            <div>
+                <h4 class="font-medium text-gray-700 mb-2 text-center">Volume de charges par site</h4>
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <canvas id="site-volume-chart" class="w-full" style="height: 400px;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table détaillée -->
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border border-gray-200">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Site</th>
+                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-700">Total</th>
+                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-700">Réussies</th>
+                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-700">Échouées</th>
+                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-700">% Réussite</th>
+                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-700">% Échec</th>
+                        <th class="px-4 py-2 text-center text-sm font-medium text-gray-700">Statut</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .SiteStats}}
+                    <tr class="border-t hover:bg-gray-50">
+                        <td class="px-4 py-2 text-sm font-medium text-gray-900">{{.Site}}</td>
+                        <td class="px-4 py-2 text-sm text-gray-900 text-right">{{.Total}}</td>
+                        <td class="px-4 py-2 text-sm text-green-600 text-right font-semibold">{{.OK}}</td>
+                        <td class="px-4 py-2 text-sm text-red-600 text-right font-semibold">{{.NOK}}</td>
+                        <td class="px-4 py-2 text-sm text-gray-900 text-right">
+                            <span class="font-semibold">{{printf "%.2f" .TauxReussite}}%</span>
+                        </td>
+                        <td class="px-4 py-2 text-sm text-gray-900 text-right">
+                            <span class="font-semibold">{{printf "%.2f" .TauxEchec}}%</span>
+                        </td>
+                        <td class="px-4 py-2 text-center">
+                            {{if ge .TauxReussite 95.0}}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    ✓ Excellent
+                                </span>
+                            {{else if ge .TauxReussite 85.0}}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    ● Bon
+                                </span>
+                            {{else if ge .TauxReussite 70.0}}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    ⚠ Attention
+                                </span>
+                            {{else}}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                    ✗ Critique
+                                </span>
+                            {{end}}
+                        </td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+        {{else}}
+        <div class="bg-gray-50 rounded-lg p-8 text-center text-gray-500">
+            Aucune donnée disponible pour les sites sélectionnés
+        </div>
+        {{end}}
+    </div>
+</div>
+
+<script>
+(function() {
+    // Données des moments
+    const momentData = [
+        {{range .MomentCounts}}
+        {
+            moment: "{{.Moment}}",
+            count: {{.Count}}
+        },
+        {{end}}
+    ];
+
+    // Graphique des moments
+    const momentsCtx = document.getElementById('moments-chart');
+    if (momentsCtx && momentData.length > 0) {
+        // Couleurs selon le moment
+        const momentColors = {
+            'Init': '#8b5cf6',
+            'Lock Connector': '#ec4899',
+            'CableCheck': '#f59e0b',
+            'Charge': '#ef4444',
+            'Fin de charge': '#10b981',
+            'Unknown': '#6b7280'
+        };
+
+        new Chart(momentsCtx, {
+            type: 'doughnut',
+            data: {
+                labels: momentData.map(m => m.moment),
+                datasets: [{
+                    data: momentData.map(m => m.count),
+                    backgroundColor: momentData.map(m => momentColors[m.moment] || '#6b7280'),
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: {
+                            font: {
+                                size: 12
+                            },
+                            padding: 15
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.parsed / total) * 100).toFixed(2);
+                                return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Données des sites
+    const siteData = [
+        {{range .SiteStats}}
+        {
+            site: "{{.Site}}",
+            total: {{.Total}},
+            ok: {{.OK}},
+            nok: {{.NOK}},
+            tauxReussite: {{.TauxReussite}}
+        },
+        {{end}}
+    ];
+
+    // Graphique taux de réussite par site
+    const siteSuccessCtx = document.getElementById('site-success-chart');
+    if (siteSuccessCtx && siteData.length > 0) {
+        // Trier par taux de réussite
+        const sortedData = [...siteData].sort((a, b) => a.tauxReussite - b.tauxReussite);
+
+        new Chart(siteSuccessCtx, {
+            type: 'bar',
+            data: {
+                labels: sortedData.map(s => s.site),
+                datasets: [{
+                    label: '% Réussite',
+                    data: sortedData.map(s => s.tauxReussite),
+                    backgroundColor: sortedData.map(s => {
+                        if (s.tauxReussite >= 95) return 'rgba(34, 197, 94, 0.6)';
+                        if (s.tauxReussite >= 85) return 'rgba(59, 130, 246, 0.6)';
+                        if (s.tauxReussite >= 70) return 'rgba(234, 179, 8, 0.6)';
+                        return 'rgba(239, 68, 68, 0.6)';
+                    }),
+                    borderColor: sortedData.map(s => {
+                        if (s.tauxReussite >= 95) return 'rgba(34, 197, 94, 1)';
+                        if (s.tauxReussite >= 85) return 'rgba(59, 130, 246, 1)';
+                        if (s.tauxReussite >= 70) return 'rgba(234, 179, 8, 1)';
+                        return 'rgba(239, 68, 68, 1)';
+                    }),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return 'Taux de réussite: ' + context.parsed.x.toFixed(2) + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Graphique volume par site
+    const siteVolumeCtx = document.getElementById('site-volume-chart');
+    if (siteVolumeCtx && siteData.length > 0) {
+        // Trier par total décroissant
+        const sortedByTotal = [...siteData].sort((a, b) => b.total - a.total);
+
+        new Chart(siteVolumeCtx, {
+            type: 'bar',
+            data: {
+                labels: sortedByTotal.map(s => s.site),
+                datasets: [
+                    {
+                        label: 'Réussies',
+                        data: sortedByTotal.map(s => s.ok),
+                        backgroundColor: 'rgba(34, 197, 94, 0.6)',
+                        borderColor: 'rgba(34, 197, 94, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Échouées',
+                        data: sortedByTotal.map(s => s.nok),
+                        backgroundColor: 'rgba(239, 68, 68, 0.6)',
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        stacked: true,
+                        beginAtZero: true
+                    },
+                    y: {
+                        stacked: true
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            footer: function(tooltipItems) {
+                                let total = 0;
+                                tooltipItems.forEach(function(tooltipItem) {
+                                    total += tooltipItem.parsed.x;
+                                });
+                                return 'Total: ' + total;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+})();
+</script>
