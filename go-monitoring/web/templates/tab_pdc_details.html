@@ -1,0 +1,76 @@
+<div class="space-y-4">
+    <div class="flex items-center justify-between">
+        <h2 class="text-xl font-semibold text-gray-800">🔌 Détails Site (par PDC)</h2>
+        {{if .Site}}
+        <span class="text-sm text-gray-600">Site sélectionné : <strong>{{.Site}}</strong></span>
+        {{else}}
+        <span class="text-sm text-gray-600">Tous les sites</span>
+        {{end}}
+    </div>
+
+    <div class="bg-white border rounded-lg shadow-sm">
+        <div class="px-4 py-3 border-b">
+            <h3 class="font-medium text-gray-700">Performance par PDC</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">PDC</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Total</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Réussite</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Échec</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Taux réussite</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {{if .PDCStats}}
+                        {{range .PDCStats}}
+                        <tr>
+                            <td class="px-4 py-2 text-gray-800">{{.PDC}}</td>
+                            <td class="px-4 py-2">{{.Total}}</td>
+                            <td class="px-4 py-2 text-green-700">{{.OK}}</td>
+                            <td class="px-4 py-2 text-red-700">{{.NOK}}</td>
+                            <td class="px-4 py-2">{{printf "%.2f" .TauxReussite}}%</td>
+                        </tr>
+                        {{end}}
+                    {{else}}
+                        <tr>
+                            <td colspan="5" class="px-4 py-3 text-center text-gray-500">Aucune donnée PDC pour les filtres actuels.</td>
+                        </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="bg-white border rounded-lg shadow-sm">
+        <div class="px-4 py-3 border-b">
+            <h3 class="font-medium text-gray-700">Répartition par moment</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Moment</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Occurrences</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {{if .MomentCounts}}
+                        {{range .MomentCounts}}
+                        <tr>
+                            <td class="px-4 py-2 text-gray-800">{{.Moment}}</td>
+                            <td class="px-4 py-2">{{.Count}}</td>
+                        </tr>
+                        {{end}}
+                    {{else}}
+                        <tr>
+                            <td colspan="2" class="px-4 py-3 text-center text-gray-500">Aucun moment disponible.</td>
+                        </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,41 @@
+<div class="space-y-4">
+    <h2 class="text-xl font-semibold text-gray-800">🔍 Analyse Erreur Spécifique</h2>
+    <p class="text-sm text-gray-600">Liste filtrée des sessions correspondant aux critères (MAC/codes) et aux filtres globaux.</p>
+
+    <div class="bg-white border rounded-lg shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Site</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">PDC</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">MAC</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Type</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Code EVI</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Code DownStream</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Début</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {{if .Sessions}}
+                        {{range .Sessions}}
+                        <tr>
+                            <td class="px-4 py-2">{{.Site}}</td>
+                            <td class="px-4 py-2">{{.PDC}}</td>
+                            <td class="px-4 py-2">{{.MACAddress}}</td>
+                            <td class="px-4 py-2">{{.TypeErreur}}</td>
+                            <td class="px-4 py-2">{{if .EVIErrorCode}}{{.EVIErrorCode}}{{else}}-{{end}}</td>
+                            <td class="px-4 py-2">{{if .DownstreamCodePC}}{{.DownstreamCodePC}}{{else}}-{{end}}</td>
+                            <td class="px-4 py-2">{{formatDate .DatetimeStart}}</td>
+                        </tr>
+                        {{end}}
+                    {{else}}
+                        <tr>
+                            <td colspan="7" class="px-4 py-3 text-center text-gray-500">Aucune session correspondant aux filtres.</td>
+                        </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

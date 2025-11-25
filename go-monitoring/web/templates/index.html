@@ -241,12 +241,12 @@
                     <button @click="activeTab = 'comparison'"
                             :class="activeTab === 'comparison' ? 'active' : ''"
                             class="tab-button">
-                        🏢 Comparaison par site
+                        🏢 Comparaison par site (Activité)
                     </button>
                     <button @click="activeTab = 'pdc-details'"
                             :class="activeTab === 'pdc-details' ? 'active' : ''"
                             class="tab-button">
-                        🔌 Détails PDC
+                        🔌 Détails Site (par PDC)
                     </button>
                     <button @click="activeTab = 'stats'"
                             :class="activeTab === 'stats' ? 'active' : ''"
@@ -261,7 +261,7 @@
                     <button @click="activeTab = 'attempts'"
                             :class="activeTab === 'attempts' ? 'active' : ''"
                             class="tab-button">
-                        ⚠️ Tentatives multiples
+                        ⚠️ Analyse tentatives multiples
                     </button>
                     <button @click="activeTab = 'suspicious'"
                             :class="activeTab === 'suspicious' ? 'active' : ''"
@@ -271,12 +271,12 @@
                     <button @click="activeTab = 'error-moment'"
                             :class="activeTab === 'error-moment' ? 'active' : ''"
                             class="tab-button">
-                        🔍 Erreur Moment
+                        🔍 Analyse Erreur Moment
                     </button>
                     <button @click="activeTab = 'error-specific'"
                             :class="activeTab === 'error-specific' ? 'active' : ''"
                             class="tab-button">
-                        🔍 Erreur Spécifique
+                        🔍 Analyse Erreur Spécifique
                     </button>
                     <button @click="activeTab = 'alerts'"
                             :class="activeTab === 'alerts' ? 'active' : ''"
@@ -286,7 +286,7 @@
                     <button @click="activeTab = 'evolution'"
                             :class="activeTab === 'evolution' ? 'active' : ''"
                             class="tab-button">
-                        📈 Évolution
+                        📈 Evolution
                     </button>
                     <button @click="activeTab = 'defects'"
                             :class="activeTab === 'defects' ? 'active' : ''"
@@ -299,11 +299,7 @@
 
         <!-- Tab Content -->
         <div class="container mx-auto px-4 py-6">
-            <div id="tab-content"
-                 hx-post="/tabs/overview"
-                 hx-trigger="load"
-                 hx-swap="innerHTML"
-                 class="bg-white rounded-lg shadow p-6">
+            <div id="tab-content" class="bg-white rounded-lg shadow p-6">
                 <!-- Le contenu sera chargé ici -->
             </div>
         </div>
@@ -330,6 +326,7 @@
                         this.loadTab(value);
                     });
                     this.updateKPIs();
+                    this.loadTab(this.activeTab);
                 },
 
                 selectAllSites() {
