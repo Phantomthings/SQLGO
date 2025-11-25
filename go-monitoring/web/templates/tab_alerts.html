@@ -1,0 +1,47 @@
+<div class="space-y-4">
+    <h2 class="text-xl font-semibold text-gray-800">⚠️ Alertes</h2>
+    <div class="bg-white border rounded-lg shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Site</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">PDC</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Type</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Détection</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Occurrences (12h)</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Moment</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Code</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {{if .Alertes}}
+                        {{range .Alertes}}
+                        <tr>
+                            <td class="px-4 py-2">{{.Site}}</td>
+                            <td class="px-4 py-2">{{.PDC}}</td>
+                            <td class="px-4 py-2">{{.TypeErreur}}</td>
+                            <td class="px-4 py-2">{{formatDate .Detection}}</td>
+                            <td class="px-4 py-2 font-semibold">{{.Occurrences12h}}</td>
+                            <td class="px-4 py-2">{{.Moment}}</td>
+                            <td class="px-4 py-2">
+                                {{if .EVICode}}
+                                    EVI {{.EVICode}}
+                                {{else if .DownstreamCodePC}}
+                                    DS {{.DownstreamCodePC}}
+                                {{else}}
+                                    -
+                                {{end}}
+                            </td>
+                        </tr>
+                        {{end}}
+                    {{else}}
+                        <tr>
+                            <td colspan="7" class="px-4 py-3 text-center text-gray-500">Aucune alerte pour les filtres sélectionnés.</td>
+                        </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

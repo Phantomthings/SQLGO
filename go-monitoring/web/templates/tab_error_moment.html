@@ -1,0 +1,60 @@
+<div class="space-y-4">
+    <h2 class="text-xl font-semibold text-gray-800">🔍 Analyse Erreur Moment</h2>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="bg-white border rounded-lg shadow-sm">
+            <div class="px-4 py-3 border-b">
+                <h3 class="font-medium text-gray-700">Répartition des moments</h3>
+            </div>
+            <ul class="divide-y divide-gray-100 text-sm">
+                {{if .MomentCounts}}
+                    {{range .MomentCounts}}
+                    <li class="px-4 py-2 flex justify-between">
+                        <span class="text-gray-700">{{.Moment}}</span>
+                        <span class="font-semibold">{{.Count}}</span>
+                    </li>
+                    {{end}}
+                {{else}}
+                    <li class="px-4 py-3 text-center text-gray-500">Aucune occurrence</li>
+                {{end}}
+            </ul>
+        </div>
+
+        <div class="space-y-4">
+            <div class="bg-white border rounded-lg shadow-sm">
+                <div class="px-4 py-3 border-b">
+                    <h3 class="font-medium text-gray-700">Codes EVI les plus fréquents</h3>
+                </div>
+                <ul class="divide-y divide-gray-100 text-sm">
+                    {{if .EVIOccurrences}}
+                        {{range $code, $item := .EVIOccurrences}}
+                        <li class="px-4 py-2 flex justify-between">
+                            <span class="text-gray-700">Code {{$code}}</span>
+                            <span class="font-semibold">{{$item.Total}} ({{printf "%.1f" $item.Percentage}}%)</span>
+                        </li>
+                        {{end}}
+                    {{else}}
+                        <li class="px-4 py-3 text-center text-gray-500">Aucun code EVI</li>
+                    {{end}}
+                </ul>
+            </div>
+
+            <div class="bg-white border rounded-lg shadow-sm">
+                <div class="px-4 py-3 border-b">
+                    <h3 class="font-medium text-gray-700">Codes DownStream les plus fréquents</h3>
+                </div>
+                <ul class="divide-y divide-gray-100 text-sm">
+                    {{if .DSOccurrences}}
+                        {{range $code, $item := .DSOccurrences}}
+                        <li class="px-4 py-2 flex justify-between">
+                            <span class="text-gray-700">Code {{$code}}</span>
+                            <span class="font-semibold">{{$item.Total}} ({{printf "%.1f" $item.Percentage}}%)</span>
+                        </li>
+                        {{end}}
+                    {{else}}
+                        <li class="px-4 py-3 text-center text-gray-500">Aucun code DownStream</li>
+                    {{end}}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>

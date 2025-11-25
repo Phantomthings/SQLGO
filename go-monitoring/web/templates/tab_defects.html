@@ -1,0 +1,35 @@
+<div class="space-y-4">
+    <h2 class="text-xl font-semibold text-gray-800">📋 Historique Défauts</h2>
+    <div class="bg-white border rounded-lg shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Site</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Défaut</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Équipement</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Début</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Fin</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {{if .Defauts}}
+                        {{range .Defauts}}
+                        <tr>
+                            <td class="px-4 py-2">{{.Site}}</td>
+                            <td class="px-4 py-2">{{.Defaut}}</td>
+                            <td class="px-4 py-2">{{.Equipement}}</td>
+                            <td class="px-4 py-2">{{formatDate .DateDebut}}</td>
+                            <td class="px-4 py-2">{{if .DateFin}}{{formatDate .DateFin}}{{else}}En cours{{end}}</td>
+                        </tr>
+                        {{end}}
+                    {{else}}
+                        <tr>
+                            <td colspan="5" class="px-4 py-3 text-center text-gray-500">Aucun défaut trouvé pour les filtres actuels.</td>
+                        </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

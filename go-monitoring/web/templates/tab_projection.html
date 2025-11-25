@@ -1,0 +1,38 @@
+<div class="space-y-4">
+    <h2 class="text-xl font-semibold text-gray-800">📑 Projection pivot</h2>
+    <p class="text-sm text-gray-600">Aperçu simplifié des sessions correspondant aux filtres. Cette section peut être complétée avec un pivot plus riche ultérieurement.</p>
+    <div class="bg-white border rounded-lg shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">ID</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Site</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">PDC</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Type</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Moment</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Début</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {{if .Sessions}}
+                        {{range .Sessions}}
+                        <tr>
+                            <td class="px-4 py-2 text-gray-800">{{.ID}}</td>
+                            <td class="px-4 py-2">{{.Site}}</td>
+                            <td class="px-4 py-2">{{.PDC}}</td>
+                            <td class="px-4 py-2">{{.TypeErreur}}</td>
+                            <td class="px-4 py-2">{{.Moment}}</td>
+                            <td class="px-4 py-2">{{formatDate .DatetimeStart}}</td>
+                        </tr>
+                        {{end}}
+                    {{else}}
+                        <tr>
+                            <td colspan="6" class="px-4 py-3 text-center text-gray-500">Aucune session pour les filtres sélectionnés.</td>
+                        </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

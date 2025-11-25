@@ -1,0 +1,37 @@
+<div class="space-y-4">
+    <h2 class="text-xl font-semibold text-gray-800">⚠️ Analyse tentatives multiples</h2>
+    <div class="bg-white border rounded-lg shadow-sm">
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 text-sm">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Site</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Heure</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">MAC</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Véhicule</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">Tentatives</th>
+                        <th class="px-4 py-2 text-left font-semibold text-gray-700">PDC(s)</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {{if .MultiAttempts}}
+                        {{range .MultiAttempts}}
+                        <tr>
+                            <td class="px-4 py-2">{{.Site}}</td>
+                            <td class="px-4 py-2">{{.Heure}}</td>
+                            <td class="px-4 py-2">{{.MAC}}</td>
+                            <td class="px-4 py-2">{{.Vehicle}}</td>
+                            <td class="px-4 py-2 font-semibold text-red-700">{{.Tentatives}}</td>
+                            <td class="px-4 py-2">{{.PDCs}}</td>
+                        </tr>
+                        {{end}}
+                    {{else}}
+                        <tr>
+                            <td colspan="6" class="px-4 py-3 text-center text-gray-500">Aucune tentative multiple trouvée.</td>
+                        </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
