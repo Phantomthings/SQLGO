@@ -1,9 +1,11 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
@@ -577,6 +579,20 @@ func (h *Handler) RefreshCache(w http.ResponseWriter, r *http.Request) {
 
 // parseFilters parse les filtres depuis la requête
 func (h *Handler) parseFilters(r *http.Request) models.Filters {
+	// Préserver le corps pour pouvoir tenter plusieurs formats (form-data puis JSON)
+	var bodyCopy []byte
+	if r.Body != nil {
+		if buf, err := io.ReadAll(r.Body); err == nil {
+			bodyCopy = buf
+			r.Body = io.NopCloser(bytes.NewBuffer(buf))
+		}
+	}
+
+	// Essayer de parser les formulaires classiques/multipart
+	if err := r.ParseMultipartForm(32 << 20); err != nil && err != http.ErrNotMultipart {
+		log.Printf("Error parsing multipart form: %v", err)
+	}
+
 	if err := r.ParseForm(); err != nil {
 		log.Printf("Error parsing form: %v", err)
 	}
@@ -611,6 +627,13 @@ func (h *Handler) parseFilters(r *http.Request) models.Filters {
 	if dayStr := r.FormValue("focus_day"); dayStr != "" {
 		if day, err := time.Parse("2006-01-02", dayStr); err == nil {
 			filters.FocusDay = day
+		}
+	}
+
+	// Si aucun champ n'a été trouvé mais qu'un corps existe, tenter le JSON
+	if len(r.Form) == 0 && len(bodyCopy) > 0 && strings.Contains(r.Header.Get("Content-Type"), "application/json") {
+		if err := json.Unmarshal(bodyCopy, &filters); err != nil {
+			log.Printf("Error parsing JSON filters: %v", err)
 		}
 	}
 
