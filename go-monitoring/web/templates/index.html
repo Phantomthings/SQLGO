@@ -313,14 +313,16 @@
         function appData() {
             return {
                 activeTab: 'overview',
+                allSites: {{.Sites | json}},
+                momentOrder: ['Init', 'Lock Connector', 'CableCheck', 'Charge', 'Fin de charge', 'Unknown'],
                 filters: {
                     sites: {{.Sites | json}},
                     date_mode: 'mois_complet',
                     focus_year: {{.Year}},
                     focus_month: {{.Month}},
                     focus_day: new Date().toISOString().split('T')[0],
-                    types_erreur: [],
-                    moments: []
+                    types_erreur: ['Erreur_EVI', 'Erreur_DownStream'],
+                    moments: ['Init', 'Lock Connector', 'CableCheck', 'Charge', 'Fin de charge', 'Unknown']
                 },
 
                 init() {
@@ -331,7 +333,7 @@
                 },
 
                 selectAllSites() {
-                    this.filters.sites = {{.Sites | json}};
+                    this.filters.sites = [...this.allSites];
                     this.updateFilters();
                 },
 
@@ -341,15 +343,27 @@
                 },
 
                 toggleMoments(moments) {
-                    moments.forEach(m => {
-                        const idx = this.filters.moments.indexOf(m);
-                        if (idx === -1) {
-                            this.filters.moments.push(m);
-                        } else {
-                            this.filters.moments.splice(idx, 1);
-                        }
-                    });
+                    const allActive = moments.every(m => this.filters.moments.includes(m));
+                    if (allActive) {
+                        this.filters.moments = this.filters.moments.filter(m => !moments.includes(m));
+                    } else {
+                        const current = new Set(this.filters.moments);
+                        moments.forEach(m => current.add(m));
+                        this.filters.moments = this.momentOrder.filter(m => current.has(m));
+                    }
                     this.updateFilters();
+                },
+
+                buildFormData() {
+                    const formData = new FormData();
+                    this.filters.sites.forEach(site => formData.append('sites[]', site));
+                    formData.append('date_mode', this.filters.date_mode);
+                    formData.append('focus_year', this.filters.focus_year);
+                    formData.append('focus_month', this.filters.focus_month);
+                    formData.append('focus_day', this.filters.focus_day);
+                    this.filters.types_erreur.forEach(type => formData.append('types_erreur[]', type));
+                    this.filters.moments.forEach(moment => formData.append('moments[]', moment));
+                    return formData;
                 },
 
                 updateFilters() {
@@ -358,7 +372,7 @@
                 },
 
                 async updateKPIs() {
-                    const formData = new FormData(document.getElementById('filter-form'));
+                    const formData = this.buildFormData();
                     const response = await fetch('/api/kpis', {
                         method: 'POST',
                         body: formData
@@ -390,7 +404,7 @@
                 },
 
                 loadTab(tab) {
-                    const formData = new FormData(document.getElementById('filter-form'));
+                    const formData = this.buildFormData();
                     fetch('/tabs/' + tab, {
                         method: 'POST',
                         body: formData
