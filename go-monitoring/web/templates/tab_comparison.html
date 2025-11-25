@@ -1,0 +1,184 @@
+<div class="space-y-6">
+    <h2 class="text-2xl font-bold text-gray-800">🏢 Comparaison par site</h2>
+
+    <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="text-lg font-semibold text-gray-800">Charges OK/NOK par site</h3>
+            <div class="space-x-2">
+                <button type="button"
+                        data-mode="count"
+                        class="toggle-mode px-3 py-1 rounded bg-blue-600 text-white text-sm shadow">
+                    Nombre
+                </button>
+                <button type="button"
+                        data-mode="percent"
+                        class="toggle-mode px-3 py-1 rounded bg-gray-200 text-gray-800 text-sm">
+                    %
+                </button>
+            </div>
+        </div>
+        <canvas id="site-comparison-chart" class="w-full" style="height: 420px;"></canvas>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+        <h3 class="text-lg font-semibold text-gray-800 mb-3">Détail par site</h3>
+        {{if gt (len .SiteStats) 0}}
+        <div class="overflow-x-auto">
+            <table class="min-w-full border border-gray-200">
+                <thead class="bg-gray-100">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-sm font-medium text-gray-700">Site</th>
+                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-700">Total</th>
+                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-700">OK</th>
+                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-700">NOK</th>
+                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-700">% Réussite</th>
+                        <th class="px-4 py-2 text-right text-sm font-medium text-gray-700">% Échec</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .SiteStats}}
+                    <tr class="border-t hover:bg-gray-50">
+                        <td class="px-4 py-2 text-sm font-medium text-gray-900">{{.Site}}</td>
+                        <td class="px-4 py-2 text-sm text-right">{{.Total}}</td>
+                        <td class="px-4 py-2 text-sm text-right text-green-700 font-semibold">{{.OK}}</td>
+                        <td class="px-4 py-2 text-sm text-right text-red-700 font-semibold">{{.NOK}}</td>
+                        <td class="px-4 py-2 text-sm text-right">{{printf "%.2f" .TauxReussite}}%</td>
+                        <td class="px-4 py-2 text-sm text-right">{{printf "%.2f" .TauxEchec}}%</td>
+                    </tr>
+                    {{end}}
+                </tbody>
+            </table>
+        </div>
+        {{else}}
+        <div class="text-gray-500 text-center py-6">Aucune donnée disponible pour les filtres sélectionnés.</div>
+        {{end}}
+    </div>
+</div>
+
+<script>
+(function() {
+    const siteData = [
+        {{range .SiteStats}}
+        {
+            site: "{{.Site}}",
+            total: {{.Total}},
+            ok: {{.OK}},
+            nok: {{.NOK}},
+            success: {{printf "%.2f" .TauxReussite}},
+            failure: {{printf "%.2f" .TauxEchec}}
+        },
+        {{end}}
+    ];
+
+    if (siteData.length === 0) {
+        return;
+    }
+
+    // Trier par total croissant pour lisibilité
+    siteData.sort((a, b) => a.total - b.total);
+
+    const ctx = document.getElementById('site-comparison-chart');
+    const labels = siteData.map(s => s.site);
+
+    const chartConfig = {
+        type: 'bar',
+        data: {
+            labels,
+            datasets: [
+                {
+                    label: 'Charges OK',
+                    data: siteData.map(s => s.ok),
+                    backgroundColor: 'rgba(59, 130, 246, 0.65)',
+                    borderColor: 'rgba(59, 130, 246, 1)',
+                    borderWidth: 1,
+                    stack: 'count'
+                },
+                {
+                    label: 'Charges NOK',
+                    data: siteData.map(s => s.nok),
+                    backgroundColor: 'rgba(239, 68, 68, 0.65)',
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    borderWidth: 1,
+                    stack: 'count'
+                },
+                {
+                    label: 'Charges OK (%)',
+                    data: siteData.map(s => s.success),
+                    backgroundColor: 'rgba(16, 185, 129, 0.65)',
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    borderWidth: 1,
+                    stack: 'percent',
+                    hidden: true,
+                    yAxisID: 'yPercent'
+                },
+                {
+                    label: 'Charges NOK (%)',
+                    data: siteData.map(s => s.failure),
+                    backgroundColor: 'rgba(234, 179, 8, 0.65)',
+                    borderColor: 'rgba(234, 179, 8, 1)',
+                    borderWidth: 1,
+                    stack: 'percent',
+                    hidden: true,
+                    yAxisID: 'yPercent'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { stacked: true },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    title: { display: true, text: 'Nombre de charges' }
+                },
+                yPercent: {
+                    stacked: true,
+                    beginAtZero: true,
+                    max: 100,
+                    display: false,
+                    position: 'right',
+                    title: { display: false }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            const label = ctx.dataset.label || '';
+                            return label + ': ' + ctx.parsed.y + (ctx.dataset.stack === 'percent' ? '%' : '');
+                        }
+                    }
+                }
+            }
+        }
+    };
+
+    const chart = new Chart(ctx, chartConfig);
+
+    // Gestion des boutons de mode
+    document.querySelectorAll('.toggle-mode').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const mode = btn.dataset.mode;
+            document.querySelectorAll('.toggle-mode').forEach(b => {
+                b.classList.remove('bg-blue-600', 'text-white');
+                b.classList.add('bg-gray-200', 'text-gray-800');
+            });
+            btn.classList.add('bg-blue-600', 'text-white');
+            btn.classList.remove('bg-gray-200', 'text-gray-800');
+
+            const showPercent = mode === 'percent';
+            chart.data.datasets.forEach(ds => {
+                ds.hidden = ds.stack === 'count' ? showPercent : !showPercent;
+            });
+            chart.options.scales.y.display = !showPercent;
+            chart.options.scales.yPercent.display = showPercent;
+            chart.options.scales.yPercent.title.display = showPercent;
+            chart.options.scales.y.title.display = !showPercent;
+            chart.options.scales.y.title.text = showPercent ? '' : 'Nombre de charges';
+            chart.update();
+        });
+    });
+})();
+</script>
