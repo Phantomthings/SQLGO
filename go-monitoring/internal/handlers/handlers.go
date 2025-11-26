@@ -164,29 +164,9 @@ func (h *Handler) TabOverview(w http.ResponseWriter, r *http.Request) {
 	// Récupérer les données
 	sessions := utils.FilterSessions(h.db.GetSessions(), filters)
 	defauts := utils.GetActiveDefauts(h.db.GetDefauts(), filters)
-	suspicious := h.db.GetSuspicious()
-	multiAttempts := h.db.GetMultiAttempts()
-	alertes := h.db.GetAlertes()
-
-	// Filtrer suspicious et multi attempts
-	var suspFiltered []models.SuspiciousTransaction
-	for _, s := range suspicious {
-		if len(filters.Sites) > 0 {
-			found := false
-			for _, site := range filters.Sites {
-				if s.Site == site {
-					found = true
-					break
-				}
-			}
-			if !found {
-				continue
-			}
-		}
-		if s.DatetimeStart.After(filters.DateStart) && s.DatetimeStart.Before(filters.DateEnd) {
-			suspFiltered = append(suspFiltered, s)
-		}
-	}
+	suspicious := filterSuspiciousTransactions(h.db.GetSuspicious(), filters)
+	multiAttempts := filterMultiAttempts(h.db.GetMultiAttempts(), filters)
+	alertes := filterAlertes(h.db.GetAlertes(), filters)
 
 	kpis := utils.CalculateKPIs(sessions, filters)
 	siteStats := utils.GetTop10Sites(sessions)
@@ -329,25 +309,7 @@ func (h *Handler) TabProjection(w http.ResponseWriter, r *http.Request) {
 // TabAttempts retourne l'onglet tentatives multiples
 func (h *Handler) TabAttempts(w http.ResponseWriter, r *http.Request) {
 	filters := h.parseFilters(r)
-	multiAttempts := h.db.GetMultiAttempts()
-
-	// Filtrer par site et date
-	var filtered []models.MultiAttempt
-	for _, m := range multiAttempts {
-		if len(filters.Sites) > 0 {
-			found := false
-			for _, site := range filters.Sites {
-				if m.Site == site {
-					found = true
-					break
-				}
-			}
-			if !found {
-				continue
-			}
-		}
-		filtered = append(filtered, m)
-	}
+	filtered := filterMultiAttempts(h.db.GetMultiAttempts(), filters)
 
 	data := struct {
 		MultiAttempts []models.MultiAttempt
@@ -365,27 +327,7 @@ func (h *Handler) TabAttempts(w http.ResponseWriter, r *http.Request) {
 // TabSuspicious retourne l'onglet transactions suspectes
 func (h *Handler) TabSuspicious(w http.ResponseWriter, r *http.Request) {
 	filters := h.parseFilters(r)
-	suspicious := h.db.GetSuspicious()
-
-	// Filtrer
-	var filtered []models.SuspiciousTransaction
-	for _, s := range suspicious {
-		if len(filters.Sites) > 0 {
-			found := false
-			for _, site := range filters.Sites {
-				if s.Site == site {
-					found = true
-					break
-				}
-			}
-			if !found {
-				continue
-			}
-		}
-		if s.DatetimeStart.After(filters.DateStart) && s.DatetimeStart.Before(filters.DateEnd) {
-			filtered = append(filtered, s)
-		}
-	}
+	filtered := filterSuspiciousTransactions(h.db.GetSuspicious(), filters)
 
 	data := struct {
 		Suspicious []models.SuspiciousTransaction
@@ -473,27 +415,7 @@ func (h *Handler) TabErrorSpecific(w http.ResponseWriter, r *http.Request) {
 // TabAlerts retourne l'onglet alertes
 func (h *Handler) TabAlerts(w http.ResponseWriter, r *http.Request) {
 	filters := h.parseFilters(r)
-	alertes := h.db.GetAlertes()
-
-	// Filtrer
-	var filtered []models.Alerte
-	for _, a := range alertes {
-		if len(filters.Sites) > 0 {
-			found := false
-			for _, site := range filters.Sites {
-				if a.Site == site {
-					found = true
-					break
-				}
-			}
-			if !found {
-				continue
-			}
-		}
-		if a.Detection.After(filters.DateStart) && a.Detection.Before(filters.DateEnd) {
-			filtered = append(filtered, a)
-		}
-	}
+	filtered := filterAlertes(h.db.GetAlertes(), filters)
 
 	data := struct {
 		Alertes []models.Alerte
@@ -528,27 +450,7 @@ func (h *Handler) TabEvolution(w http.ResponseWriter, r *http.Request) {
 // TabDefects retourne l'onglet historique défauts
 func (h *Handler) TabDefects(w http.ResponseWriter, r *http.Request) {
 	filters := h.parseFilters(r)
-	defauts := h.db.GetDefauts()
-
-	// Filtrer
-	var filtered []models.Defaut
-	for _, d := range defauts {
-		if len(filters.Sites) > 0 {
-			found := false
-			for _, site := range filters.Sites {
-				if d.Site == site {
-					found = true
-					break
-				}
-			}
-			if !found {
-				continue
-			}
-		}
-		if d.DateDebut.After(filters.DateStart) && d.DateDebut.Before(filters.DateEnd) {
-			filtered = append(filtered, d)
-		}
-	}
+	filtered := filterDefauts(h.db.GetDefauts(), filters)
 
 	data := struct {
 		Defauts []models.Defaut
@@ -656,4 +558,120 @@ func (h *Handler) parseFilters(r *http.Request) models.Filters {
 	}
 
 	return filters
+}
+
+// Helpers pour appliquer les filtres globaux sur différentes sources de données
+func filterSuspiciousTransactions(transactions []models.SuspiciousTransaction, filters models.Filters) []models.SuspiciousTransaction {
+	var filtered []models.SuspiciousTransaction
+
+	for _, s := range transactions {
+		if !matchesSite(filters.Sites, s.Site) {
+			continue
+		}
+
+		if !withinRange(s.DatetimeStart, filters.DateStart, filters.DateEnd) {
+			continue
+		}
+
+		filtered = append(filtered, s)
+	}
+
+	return filtered
+}
+
+func filterMultiAttempts(attempts []models.MultiAttempt, filters models.Filters) []models.MultiAttempt {
+	var filtered []models.MultiAttempt
+
+	for _, m := range attempts {
+		if !matchesSite(filters.Sites, m.Site) {
+			continue
+		}
+
+		if !intervalOverlaps(m.PremiereTentative, m.DerniereTentative, filters.DateStart, filters.DateEnd) {
+			continue
+		}
+
+		filtered = append(filtered, m)
+	}
+
+	return filtered
+}
+
+func filterAlertes(alertes []models.Alerte, filters models.Filters) []models.Alerte {
+	var filtered []models.Alerte
+
+	for _, a := range alertes {
+		if !matchesSite(filters.Sites, a.Site) {
+			continue
+		}
+
+		if len(filters.TypesErreur) > 0 && !containsString(filters.TypesErreur, a.TypeErreur) {
+			continue
+		}
+
+		if len(filters.Moments) > 0 && !containsString(filters.Moments, a.Moment) {
+			continue
+		}
+
+		if !withinRange(a.Detection, filters.DateStart, filters.DateEnd) {
+			continue
+		}
+
+		filtered = append(filtered, a)
+	}
+
+	return filtered
+}
+
+func filterDefauts(defauts []models.Defaut, filters models.Filters) []models.Defaut {
+	var filtered []models.Defaut
+
+	for _, d := range defauts {
+		if !matchesSite(filters.Sites, d.Site) {
+			continue
+		}
+
+		if !withinRange(d.DateDebut, filters.DateStart, filters.DateEnd) {
+			continue
+		}
+
+		filtered = append(filtered, d)
+	}
+
+	return filtered
+}
+
+func matchesSite(selected []string, site string) bool {
+	if len(selected) == 0 {
+		return true
+	}
+
+	for _, s := range selected {
+		if s == site {
+			return true
+		}
+	}
+
+	return false
+}
+
+func withinRange(t time.Time, start, end time.Time) bool {
+	return !t.Before(start) && t.Before(end)
+}
+
+func intervalOverlaps(start, end, filterStart, filterEnd time.Time) bool {
+	if end.IsZero() || end.Before(start) {
+		end = start
+	}
+
+	return !end.Before(filterStart) && start.Before(filterEnd)
+}
+
+func containsString(slice []string, value string) bool {
+	for _, s := range slice {
+		if s == value {
+			return true
+		}
+	}
+	return false
 }
